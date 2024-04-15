@@ -30,7 +30,7 @@ def get_file_information(fpath2):
     wb.close()
 
     return inspection_data, base_inspection, result_path
-def input_excel(new_form,machine_name,kiki_n,room_name,bikou_data,f_path,template_path):
+def input_excel(new_form,machine_name,kiki_n,room_name,bikou_data,f_path,temp_path,t_type):
     """データフレームをエクセルファイル（月例点検結果_雛型）に入力
        生成したexcelは「tmp_data_file」内に保存
     Parameter:
@@ -44,8 +44,10 @@ def input_excel(new_form,machine_name,kiki_n,room_name,bikou_data,f_path,templat
         点検結果の備考
     f_path: str
         現在位置のパス
-    template_path: str
+    temp_path: str
         雛型エクセルデータのパス
+    t_type: str
+        点検タイプ（general or freon)
     Return:
     ------
     folder_path: str
@@ -57,7 +59,7 @@ def input_excel(new_form,machine_name,kiki_n,room_name,bikou_data,f_path,templat
     side = Side(style='thin', color='000000')
     border = Border(top=side, bottom=side, left=side, right=side)
     
-    wb = load_workbook(template_path)
+    wb = load_workbook(temp_path)
     ws = wb['Sheet1'] 
 
     ws.cell(row=4,column=3,value=machine_name)
@@ -71,11 +73,11 @@ def input_excel(new_form,machine_name,kiki_n,room_name,bikou_data,f_path,templat
             if ws.cell(row=12+y,column=2+x).value:
                 ws.cell(row=12+y,column=2+x).border= border           
 
-    folder_path = f"{f_path}/tmp_data_file"
+    folder_path = f"{f_path}/tmp_data_file_{t_type}"
     
     os.makedirs(folder_path,exist_ok="true")
 
-    wb.save(f'{f_path}/tmp_data_file/{kiki_n}.xlsx')
+    wb.save(f'{folder_path}/{kiki_n}.xlsx')
 
     return folder_path
 
@@ -89,18 +91,37 @@ def make_df(kijyun,kiki_n):
             base_dataに記載の機器番号
     Returns
     -------
-    new_form_: dataframe
-    new_form: dataframe
+    ex_nonfreon_: dataframe
+        一般点検項目のデータフレーム（点検者、安全衛生委員、室長は含まない）
+    ex_nonfreon : dataframe
+        一般点検項目のデータフレーム
+    ex_freon_: dataframe
+        フロン機器点検項目のデータフレーム（点検者、安全衛生委員、室長は含まない）
+    ex_freon : dataframe
+        フロン機器点検項目のデータフレーム
     """
-    ex_room = kijyun[kijyun["該当機器"]==kiki_n].reset_index()
-    new_form_ = ex_room.loc[:,["点検番号","点検部位","点検内容","点検方法","判定基準"]]
-    new_form_[["4月","5月","6月","7月","8月","9月","10月","11月","12月","1月","2月","3月"]]=""
-    add_data = pd.DataFrame({"点検番号":"","点検部位":"","点検内容":"","点検方法":"","判定基準":"点検者"},index=[len(new_form_)])
-    add_data2 = pd.DataFrame({"点検番号":"","点検部位":"","点検内容":"","点検方法":"","判定基準":"安全衛生委員"},index=[len(new_form_)+1])
-    add_data3 = pd.DataFrame({"点検番号":"","点検部位":"","点検内容":"","点検方法":"","判定基準":"室長"},index=[len(new_form_)+2])
-    new_form = pd.concat([new_form_,add_data,add_data2,add_data3])
 
-    return new_form_,new_form
+    ex_machine = kijyun[kijyun["該当機器"]==kiki_n].reset_index()
+
+    # 一般点検用
+    ex_nonfreon_b = ex_machine[~ex_machine["点検番号"].str.contains("freon")].reset_index()
+    ex_nonfreon_ = ex_nonfreon_b.loc[:,["点検番号","点検部位","点検内容","点検方法","判定基準"]]
+    ex_nonfreon_[["4月","5月","6月","7月","8月","9月","10月","11月","12月","1月","2月","3月"]]=""
+    add_data = pd.DataFrame({"点検番号":"","点検部位":"","点検内容":"","点検方法":"","判定基準":"点検者"},index=[len(ex_nonfreon_)])
+    add_data2 = pd.DataFrame({"点検番号":"","点検部位":"","点検内容":"","点検方法":"","判定基準":"安全衛生委員"},index=[len(ex_nonfreon_)+1])
+    add_data3 = pd.DataFrame({"点検番号":"","点検部位":"","点検内容":"","点検方法":"","判定基準":"室長"},index=[len(ex_nonfreon_)+2])
+    ex_nonfreon = pd.concat([ex_nonfreon_,add_data,add_data2,add_data3])
+
+    # フロン点検用
+    ex_freon_b = ex_machine[ex_machine["点検番号"].str.contains("freon")].reset_index()
+    ex_freon_ = ex_freon_b.loc[:,["点検番号","点検部位","点検内容","点検方法","判定基準"]]
+    ex_freon_[["4月","5月","6月","7月","8月","9月","10月","11月","12月","1月","2月","3月"]]=""
+    add_data = pd.DataFrame({"点検番号":"","点検部位":"","点検内容":"","点検方法":"","判定基準":"点検者"},index=[len(ex_freon_)])
+    add_data2 = pd.DataFrame({"点検番号":"","点検部位":"","点検内容":"","点検方法":"","判定基準":"安全衛生委員"},index=[len(ex_freon_)+1])
+    add_data3 = pd.DataFrame({"点検番号":"","点検部位":"","点検内容":"","点検方法":"","判定基準":"室長"},index=[len(ex_freon_)+2])
+    ex_freon = pd.concat([ex_freon_,add_data,add_data2,add_data3])   
+
+    return ex_nonfreon,ex_nonfreon_,ex_freon,ex_freon_
 
 def extract_machine_room(kiki_n,result):
     """月例点検結果データから機器番号に該当する機器名、設置部屋情報を取得
@@ -166,7 +187,7 @@ def input_result(result,kiki_n,new_form_,new_form):
             new_form.loc[tenken_index,tenken_tuki] = tenken_man
             new_form.loc[confirm_index,tenken_tuki] = anzen
             new_form.loc[approve_index,tenken_tuki] = manager
-
+    
     bikou_data = "->".join(bikou_list)
 
     return new_form, bikou_data
@@ -220,6 +241,7 @@ def merge_pdf(folder_path,save_path,name):
 f_path = os.getcwd()
 f_path2 = f"{f_path}/ファイル名の登録"
 template_path = f"{f_path}/雛型データ/月例点検結果_雛型.xlsx"
+template_path_freon = f"{f_path}/雛型データ/月例点検結果_freon_雛型.xlsx"
 
 # ファイル名の取得
 inspection_data, base_inspection,result_path = get_file_information(f_path2)
@@ -241,19 +263,36 @@ kiki_list = list(set(kiki_list_))
 
 # 機器番号毎に空データフレームを作成、月毎に点検結果を追記、点検者名/安全衛生委員/室長名を追記
 for kiki_n in kiki_list:
-    new_form_,new_form = make_df(kijyun,kiki_n)
+    ex_nonfreon,ex_nonfreon_,ex_freon,ex_freon_ = make_df(kijyun,kiki_n)
     machine_name,room_name = extract_machine_room(kiki_n,result)
-    new_form, bikou_data = input_result(result,kiki_n,new_form_,new_form)
-    folder_path = input_excel(new_form,machine_name,kiki_n,room_name,bikou_data,f_path,template_path)
+
+    # 一般点検
+    t_type = "general"
+    non_freon, bikou_data = input_result(result,kiki_n,ex_nonfreon_,ex_nonfreon)
+    nonfreon_folder_path = input_excel(non_freon,machine_name,kiki_n,room_name,bikou_data,f_path,template_path,t_type)
+
+    # フロン機器点検
+    t_type = "freon"
+    if not ex_freon.empty:
+        freon, bikou_data = input_result(result,kiki_n,ex_freon_,ex_freon)
+        freon_folder_path = input_excel(freon,machine_name,kiki_n,room_name,bikou_data,f_path,template_path_freon,t_type)
 
 # 生成した月例点検結果(.xlsx)をpdfに変換
-convert_to_pdf(folder_path)
+convert_to_pdf(nonfreon_folder_path)
+convert_to_pdf(freon_folder_path)
 
 # 生成した機器毎のpdfを統合
 save_path = result_path
 year = datetime.date.today().year
+
+# 一般点検
 name = f"{year}年度_月例点検データ"
-merge_pdf(folder_path,save_path,name)
+merge_pdf(nonfreon_folder_path,save_path,name)
+
+# フロン機器
+name_f = f"{year}年度_フロン月例点検データ"
+merge_pdf(freon_folder_path,save_path,name_f)
 
 # 不要データの削除
-shutil.rmtree(folder_path)
+shutil.rmtree(nonfreon_folder_path)
+shutil.rmtree(freon_folder_path)
