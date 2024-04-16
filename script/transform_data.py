@@ -249,7 +249,9 @@ tenken_path = f"{f_path}/{inspection_data}"
 kijyun_path = f"{f_path}/{base_inspection}"
 
 # 点検結果の読込み
-df = pd.read_csv(tenken_path)
+df_ = pd.read_csv(tenken_path)
+df = df_.loc[:,["field_1","field_2","field_3","field_4","field_5","field_7","field_8","field_9","field_10"]]
+df.columns = ["機器番号","装置名","設置場所","点検月","点検者","点検結果","点検結果備考","安全衛生委員","室長"]
 result_ = df.loc[:,["機器番号","装置名","設置場所","点検月","点検者","安全衛生委員","室長","点検結果備考","点検結果"]]
 result = result_.fillna("")
 
