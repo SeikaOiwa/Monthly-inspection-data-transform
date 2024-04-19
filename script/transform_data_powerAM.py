@@ -268,6 +268,8 @@ kijyun = kijyun_.loc[:,["該当機器","点検番号","点検部位","点検内�
 kiki_list_ = [i for i in result['機器番号']]
 kiki_list = list(set(kiki_list_))
 
+freon_folder_path = ""
+
 # 機器番号毎に空データフレームを作成、月毎に点検結果を追記、点検者名/安全衛生委員/室長名を追記
 for kiki_n in kiki_list:
     ex_nonfreon,ex_nonfreon_,ex_freon,ex_freon_,freon_div = make_df(kijyun,kiki_n)
@@ -286,7 +288,8 @@ for kiki_n in kiki_list:
 
 # 生成した月例点検結果(.xlsx)をpdfに変換
 convert_to_pdf(nonfreon_folder_path)
-convert_to_pdf(freon_folder_path)
+if freon_folder_path is not "":
+    convert_to_pdf(freon_folder_path)
 
 # 生成した機器毎のpdfを統合
 save_path = result_path
@@ -297,9 +300,11 @@ name = f"{year}年度_月例点検データ"
 merge_pdf(nonfreon_folder_path,save_path,name)
 
 # フロン機器
-name_f = f"{year}年度_フロン月例点検データ"
-merge_pdf(freon_folder_path,save_path,name_f)
+if freon_folder_path is not "":
+    name_f = f"{year}年度_フロン月例点検データ"
+    merge_pdf(freon_folder_path,save_path,name_f)
 
 # 不要データの削除
 shutil.rmtree(nonfreon_folder_path)
-shutil.rmtree(freon_folder_path)
+if freon_folder_path is not "":
+    shutil.rmtree(freon_folder_path)
